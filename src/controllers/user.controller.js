@@ -32,8 +32,7 @@ const registerUser = asyncHandler(async (req, res) => {
     !(
       req &&
       req?.files &&
-      req?.files?.coverImage &&
-      req?.files?.coverImage?.path
+      req?.files?.coverImage
     )
   ) {
     coverImagePath = "";
