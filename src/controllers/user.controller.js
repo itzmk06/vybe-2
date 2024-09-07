@@ -16,11 +16,11 @@ const registerUser=asyncHandler(async (req,res)=>{
     }
 
     // check whether username or password already exist 
-    const existedUser=User.findOne({
+    const existedUser=await User.findOne({
         $or:[{email},{username}]
     })
     if(existedUser){
-        throw new ApiError(401,"Already users with same username/email exist!");
+        throw new ApiError(401,"Already users with same username / email exist!");
     }
     // check avatar is uploaded by user 
     const avatarLocalPath=req?.files?.avatar[0]?.path;
@@ -39,7 +39,7 @@ const registerUser=asyncHandler(async (req,res)=>{
     }
 
     // create an user object and make entry in db 
-    const user=User.create(
+    const user=await User.create(
         {
             fullName:fullName,
             email:email,
