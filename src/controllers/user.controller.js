@@ -294,7 +294,7 @@ const updateTextProfile=asyncHandler(async(req,res)=>{
         new:true,
         runValidators: true
       }
-    )
+    ).select("-password -refreshToken")
     return res.status(200)
                 .json(
                   new ApiResponse(
