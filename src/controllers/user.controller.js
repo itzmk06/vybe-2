@@ -261,4 +261,53 @@ try {
 }
 });
 
-export { registerUser, userLogin, userLogout, refreshTokenHandle, changePassword };
+const getCurrentUser=asyncHandler(async (req,res)=>{
+  return res.status(200)
+            .json(
+              new ApiResponse(
+                200,
+                "User fetch sucessfull!",
+                req.user
+              )
+            )
+});
+
+const updateTextProfile=asyncHandler(async(req,res)=>{
+  // get detail from user 
+  const {username,email,fullName}=req?.body;
+  // get current user 
+  const user=req?.user;
+  if(!user){
+    throw new ApiError(500,"Something went wrong on our side!");
+  }
+  try {
+    // fetch user data from db 
+    const newUserData=await User.findByIdAndUpdate(
+      user?._id,
+      {
+        $set:{
+          username:username,
+          email:email,
+          fullName:fullName
+        }
+      },{
+        new:true,
+        runValidators: true
+      }
+    )
+    return res.status(200)
+                .json(
+                  new ApiResponse(
+                    200,
+                    "Update successfull",
+                    newUserData
+                  )
+                )
+  } catch (error) {
+      throw new ApiError(400,"User with same credentials already exists!")
+  }
+});
+
+
+
+export { registerUser, userLogin, userLogout, refreshTokenHandle, changePassword,getCurrentUser, updateTextProfile };
