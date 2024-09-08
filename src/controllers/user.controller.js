@@ -221,4 +221,44 @@ const refreshTokenHandle = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, userLogin, userLogout, refreshTokenHandle };
+const changePassword=asyncHandler(async(req,res)=>{
+  // get old,new,confirm passwords from req.body 
+  const {oldPassword,newPassword,confirmPassword}=req.body;
+  
+  // check whether confirm pass=new passs
+  if(!(newPassword===confirmPassword)){
+    throw new ApiError(400,"new password and confirm passwords are not matched!");
+  }
+
+
+try {
+    // get user from req.user
+    const user=await User.findById(req?.user?._id);
+    if(!user){
+      throw new ApiError(400,"User not found!");
+    }
+  
+    // verify password of old password
+    const isPassCorrect=await user.isPasswordCorrect(oldPassword);
+    if(!isPassCorrect){
+      throw new ApiError(400,"Your old password is incorrect");
+    }
+  
+    user.password=newPassword;
+    await user.save({
+      validateBeforeSave:false
+    })
+  
+    return res.status(200)
+                .json(
+                  new ApiResponse(
+                    200,
+                    "Successfully changed password!",
+                  )
+                )
+} catch (error) {
+  throw new ApiError(400,error.message)
+}
+});
+
+export { registerUser, userLogin, userLogout, refreshTokenHandle, changePassword };
