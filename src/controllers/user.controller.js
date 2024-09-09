@@ -300,15 +300,15 @@ const updateTextProfile = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
   // get avatar file
+  try {
   const avatarLocalPath = req?.files?.avatar[0]?.path;
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Please reupload avatar file!");
   }
-
+  
   // upload avatar to cloudinary
   const avatar = await uploadOnCloudinary(avatarLocalPath);
-
   if (!avatar) {
     throw new ApiError(
       400,
@@ -317,7 +317,6 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   }
 
   // find and update avatar
-  try {
     const user = await User.findByIdAndUpdate(
       req?.user?._id,
       {
@@ -339,6 +338,46 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   }
 });
 
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  // get avatar file
+  try {
+  const coverImageLocalPath = req?.files?.coverImage[0]?.path;
+
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, "Please reupload coverImage file!");
+  }
+  
+  // upload avatar to cloudinary
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  if (!coverImage) {
+    throw new ApiError(
+      400,
+      "coverImage file not uploaded to cloud! Try again later..."
+    );
+  }
+
+  // find and update avatar
+    const user = await User.findByIdAndUpdate(
+      req?.user?._id,
+      {
+        $set: {
+          coverImage: coverImage.url,
+        },
+      },
+      {
+        new: true,
+      }
+    ).select("-password");
+
+    // return the corrected user
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Successfully updated user coverImage!", user));
+  } catch (error) {
+    throw new ApiError(500, "we're unable to fetch your info! try again later");
+  }
+});
+
 export {
   registerUser,
   userLogin,
@@ -348,4 +387,5 @@ export {
   getCurrentUser,
   updateTextProfile,
   updateUserAvatar,
+  updateUserCoverImage,
 };
