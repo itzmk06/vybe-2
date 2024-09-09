@@ -162,152 +162,190 @@ const userLogout = asyncHandler(async (req, res) => {
 });
 
 const refreshTokenHandle = asyncHandler(async (req, res) => {
-    // get refresh token either from cookies or from request body
-    const incomingRefreshToken =
-      req?.body?.refreshToken || req?.cookies?.refreshToken;
+  // get refresh token either from cookies or from request body
+  const incomingRefreshToken =
+    req?.body?.refreshToken || req?.cookies?.refreshToken;
 
-    if (!incomingRefreshToken) {
-      throw new ApiError(401, "unauthorized access!");
-    }
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "unauthorized access!");
+  }
   try {
-      // verify incoming refresh token
-      const decodedToken =  jwt.verify(
-        incomingRefreshToken,
-        process.env.REFRESH_TOKEN_SECRET
+    // verify incoming refresh token
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    if (!decodedToken) {
+      throw new ApiError(
+        401,
+        "Failed to verify your login! Try again later..."
       );
-  
-      if (!decodedToken) {
-        throw new ApiError(
-          401,
-          "Failed to verify your login! Try again later..."
-        );
-      }
-  
-      // get user from db with help of decoded token which has user info
-      const user = await User.findById(decodedToken?._id);
-  
-      if (!user) {
-        throw new ApiError(
-          501,
-          "We're not able to fetch your info, Please try again later..."
-        );
-      }
-  
-      if (incomingRefreshToken !== user?.refreshToken) {
-        throw new ApiError(
-          401,
-          "You don't have permissions to access this account!"
-        );
-      }
-  
-      const { accessToken, newRefreshToken } =
-        await generateAccessAndRefreshToken(user?._id);
-  
-      const options = {
-        secure: true,
-        httpOnly: true,
-      };
-      return res.status(201)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", newRefreshToken, options)
-        .json(
-          new ApiResponse(200, "Access token refreshed!", {
-            accessToken: accessToken,
-            refreshToken: newRefreshToken,
-          })
-        );
+    }
+
+    // get user from db with help of decoded token which has user info
+    const user = await User.findById(decodedToken?._id);
+
+    if (!user) {
+      throw new ApiError(
+        501,
+        "We're not able to fetch your info, Please try again later..."
+      );
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(
+        401,
+        "You don't have permissions to access this account!"
+      );
+    }
+
+    const { accessToken, newRefreshToken } =
+      await generateAccessAndRefreshToken(user?._id);
+
+    const options = {
+      secure: true,
+      httpOnly: true,
+    };
+    return res
+      .status(201)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", newRefreshToken, options)
+      .json(
+        new ApiResponse(200, "Access token refreshed!", {
+          accessToken: accessToken,
+          refreshToken: newRefreshToken,
+        })
+      );
   } catch (error) {
-    throw new ApiError(400,"Something went wrong! please try again later...")
+    throw new ApiError(400, "Something went wrong! please try again later...");
   }
 });
 
-const changePassword=asyncHandler(async(req,res)=>{
-  // get old,new,confirm passwords from req.body 
-  const {oldPassword,newPassword,confirmPassword}=req.body;
-  
+const changePassword = asyncHandler(async (req, res) => {
+  // get old,new,confirm passwords from req.body
+  const { oldPassword, newPassword, confirmPassword } = req.body;
+
   // check whether confirm pass=new passs
-  if(!(newPassword===confirmPassword)){
-    throw new ApiError(400,"new password and confirm passwords are not matched!");
+  if (!(newPassword === confirmPassword)) {
+    throw new ApiError(
+      400,
+      "new password and confirm passwords are not matched!"
+    );
   }
 
-
-try {
+  try {
     // get user from req.user
-    const user=await User.findById(req?.user?._id);
-    if(!user){
-      throw new ApiError(400,"User not found!");
+    const user = await User.findById(req?.user?._id);
+    if (!user) {
+      throw new ApiError(400, "User not found!");
     }
-  
+
     // verify password of old password
-    const isPassCorrect=await user.isPasswordCorrect(oldPassword);
-    if(!isPassCorrect){
-      throw new ApiError(400,"Your old password is incorrect");
+    const isPassCorrect = await user.isPasswordCorrect(oldPassword);
+    if (!isPassCorrect) {
+      throw new ApiError(400, "Your old password is incorrect");
     }
-  
-    user.password=newPassword;
+
+    user.password = newPassword;
     await user.save({
-      validateBeforeSave:false
-    })
-  
-    return res.status(200)
-                .json(
-                  new ApiResponse(
-                    200,
-                    "Successfully changed password!",
-                  )
-                )
-} catch (error) {
-  throw new ApiError(400,error.message)
-}
+      validateBeforeSave: false,
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Successfully changed password!"));
+  } catch (error) {
+    throw new ApiError(400, error.message);
+  }
 });
 
-const getCurrentUser=asyncHandler(async (req,res)=>{
-  return res.status(200)
-            .json(
-              new ApiResponse(
-                200,
-                "User fetch sucessfull!",
-                req.user
-              )
-            )
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "User fetch sucessfull!", req.user));
 });
 
-const updateTextProfile=asyncHandler(async(req,res)=>{
-  // get detail from user 
-  const {username,email,fullName}=req?.body;
-  // get current user 
-  const user=req?.user;
-  if(!user){
-    throw new ApiError(500,"Something went wrong on our side!");
+const updateTextProfile = asyncHandler(async (req, res) => {
+  // get detail from user
+  const { username, email, fullName } = req?.body;
+  // get current user
+  const user = req?.user;
+  if (!user) {
+    throw new ApiError(500, "Something went wrong on our side!");
   }
   try {
-    // fetch user data from db 
-    const newUserData=await User.findByIdAndUpdate(
+    // fetch user data from db
+    const newUserData = await User.findByIdAndUpdate(
       user?._id,
       {
-        $set:{
-          username:username,
-          email:email,
-          fullName:fullName
-        }
-      },{
-        new:true,
-        runValidators: true
+        $set: {
+          username: username,
+          email: email,
+          fullName: fullName,
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
       }
-    ).select("-password -refreshToken")
-    return res.status(200)
-                .json(
-                  new ApiResponse(
-                    200,
-                    "Update successfull",
-                    newUserData
-                  )
-                )
+    ).select("-password -refreshToken");
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Update successfull", newUserData));
   } catch (error) {
-      throw new ApiError(400,"User with same credentials already exists!")
+    throw new ApiError(400, "User with same credentials already exists!");
   }
 });
 
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  // get avatar file
+  const avatarLocalPath = req?.files?.avatar[0]?.path;
 
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Please reupload avatar file!");
+  }
 
-export { registerUser, userLogin, userLogout, refreshTokenHandle, changePassword,getCurrentUser, updateTextProfile };
+  // upload avatar to cloudinary
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!avatar) {
+    throw new ApiError(
+      400,
+      "Avatar file not uploaded to cloud! Try again later..."
+    );
+  }
+
+  // find and update avatar
+  try {
+    const user = await User.findByIdAndUpdate(
+      req?.user?._id,
+      {
+        $set: {
+          avatar: avatar.url,
+        },
+      },
+      {
+        new: true,
+      }
+    ).select("-password");
+
+    // return the corrected user
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Successfully updated user avatar!", user));
+  } catch (error) {
+    throw new ApiError(500, "we're unable to fetch your info! try again later");
+  }
+});
+
+export {
+  registerUser,
+  userLogin,
+  userLogout,
+  refreshTokenHandle,
+  changePassword,
+  getCurrentUser,
+  updateTextProfile,
+  updateUserAvatar,
+};
